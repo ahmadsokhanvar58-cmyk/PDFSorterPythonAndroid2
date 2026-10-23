@@ -1,0 +1,55 @@
+name: Build Java PDF Sorter APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "java-app/**"
+      - ".github/workflows/build-java-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Build Java APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace -p java-app assembleDebug
+
+      - name: Verify APK exists
+        run: |
+          APK="java-app/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          ls -lh "$APK"
+
+      - name: Upload Java APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDFSorter-Java-debug-APK
+          path: java-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
